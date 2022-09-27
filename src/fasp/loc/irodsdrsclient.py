@@ -2,8 +2,10 @@ import requests
 import json
 import os.path
 from requests.auth import HTTPBasicAuth
+import logging
+from DRSClient import DRSClient
 
-import DRSClient
+logging_level = logging.INFO
 
 
 class IrodsDRSClient(DRSClient):
@@ -43,32 +45,31 @@ class IrodsDRSClient(DRSClient):
         return DRSClient.get_access_url(self, object_id, access_id=access_id)
 
 
-
-
 if __name__ == "__main__":
 
+    filepath = os.path.expanduser('~/.keys/irods_credentials.json')
+    if not os.path.exists(filepath):
+        logging.error(f"{filepath} does not exist")
+    else:
+        with open(filepath) as f:
+            cfg = json.load(f)
+            #api_url_base, auth_url, user_name, password,access_id=None, debug=False)
+            drsClient =  IrodsDRSClient(cfg['api_url'], cfg['auth_url'], cfg['user'], cfg['password'])
+            drs_id = cfg['drs_bundle_id']
+            logging.INFO("drs id:%s" % drs_id)
 
-
-
-    for (testname, test) in test_data.items():
-        print('______________________________________')
-        print(testname)
-        drsClient = test['drs_client']
-        if drsClient.api_key == None:
-            print(f"This DRS client failed to obtain authorization. Check credentials file")
-            print("Will proceed with /objects calls only.\n")
-        for drs_id in test['drs_ids']:
             res = drsClient.get_object(drs_id)
-            print(f'GetObject for {drs_id}')
-            print(json.dumps(res, indent=3))
+            logging.INFO('GetObject for %s' % drs_id)
+            logging.INFO(json.dumps(res, indent=3))
             # Get and access URL
             try:
                 url = drsClient.get_access_url(drs_id)
-                print(f'URL for {drs_id}')
-                print(url)
+                logging.INFO(f'URL for {drs_id}')
             except:
-                if drsClient.api_key == None:
+                if not drsClient.authorized:
                     print(
-                        "This DRS client has not obtained authorization and cannot obtain URLs for controlled access objects")
+                        "This DRS client has not obtained authorization "
+                        "and cannot obtain URLs for controlled access objects")
                 else:
                     print("You may not have authorization for this object")
+
